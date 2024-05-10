@@ -147,8 +147,8 @@ func main() {
 			log.Fatalln("Failed to write csv: %s", err)
 		}
 	} else if strings.EqualFold(*output, "info") {
-		if err := writeNodeConfigurationToINFOYAML("proxies_info.yaml", results); err != nil {
-			log.Fatalln("Failed to write csv: %s", err)
+		if err := writeNodeConfigurationToINFOYAML("proxies_info.yaml", results, allProxies); err != nil {
+			log.Fatalln("Failed to write yaml with info: %s", err)
 		}
 	}
 		
