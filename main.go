@@ -172,22 +172,18 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
             // 格式化带宽后缀
             bandwidthSuffix := formatBandwidthSuffix(result.Bandwidth)
             // 更新proxies中的节点名称
-            proxy.Name += bandwidthSuffix
+            proxy.SecretConfig.Name += bandwidthSuffix
             sortedProxies = append(sortedProxies, proxy)
+	    if filter_out == "yes" {
+		if result.Bandwidth > 10*1024*1024 && result.TTFB > 0 && result.TTFB < 200 {
+		    sortedProxies = append(sortedProxies, proxy.SecretConfig)
+		}
+	    } else {
+	        sortedProxies = append(sortedProxies, proxy.SecretConfig)
+	    }
             // 从proxies映射中删除已处理的节点
             delete(proxies, result.Name)
         }
-    }
-
-    // 如果filter_out为"yes"，则过滤掉不符合条件的节点
-    if filter_out == "yes" {
-        tempProxies := sortedProxies[:0]
-        for _, proxy := range sortedProxies {
-            if proxy.Bandwidth > 10*1024*1024 && proxy.TTFB > 0 && proxy.TTFB < 2000 {
-                tempProxies = append(tempProxies, proxy)
-            }
-        }
-        sortedProxies = tempProxies
     }
 
     // 添加未经测试的节点
@@ -204,15 +200,6 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
     _, err = fp.Write(bytes)
     return err
 }
-
-// 辅助函数，用于格式化带宽后缀
-func formatBandwidthSuffix(bandwidth float64) string {
-    // 假设带宽单位是bps，并转换为Mbps
-    bandwidthMbps := bandwidth / (1024 * 1024)
-    // 返回不带小数的带宽后缀
-    return fmt.Sprintf("@%dMbps", int(bandwidthMbps))
-}
-
 
 // 辅助函数，用于格式化带宽值
 func formatBandwidthSuffix(bandwidth float64) string {
