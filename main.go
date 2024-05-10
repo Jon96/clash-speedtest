@@ -154,7 +154,7 @@ func main() {
 		
 }
 
-func writeNodeConfigurationToFILTERYAML(filePath string, results []Result, proxies map[string]CProxy) error {
+func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies map[string]CProxy) error {
     // 按带宽排序并格式化名称
     sort.Slice(results, func(i, j int) bool {
         return results[i].Bandwidth > results[j].Bandwidth
