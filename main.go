@@ -28,6 +28,7 @@ var (
 	livenessObject     = flag.String("l", "https://speed.cloudflare.com/__down?bytes=%d", "liveness object, support http(s) url, support payload too")
 	configPathConfig   = flag.String("c", "", "configuration file path, also support http(s) url")
 	filterRegexConfig  = flag.String("f", ".*", "filter proxies by name, use regexp")
+	negFilterRegexConfig  = flag.String("nf", "", "neg-filter proxies by name, use regexp")
 	downloadSizeConfig = flag.Int("size", 1024*1024*100, "download size for testing proxies")
 	timeoutConfig      = flag.Duration("timeout", time.Second*5, "timeout for testing proxies")
 	sortField          = flag.String("sort", "b", "sort field for testing proxies, b for bandwidth, t for TTFB")
@@ -97,7 +98,7 @@ func main() {
 		}
 	}
 
-	filteredProxies := filterProxies(*filterRegexConfig, allProxies)
+	filteredProxies := filterProxies(*filterRegexConfig, *negFilterRegexConfig, allProxies)
 	results := make([]Result, 0, len(filteredProxies))
 
 	format := "%s%-42s\t%-12s\t%-12s\033[0m\n"
@@ -225,17 +226,24 @@ func formatBandwidthSuffix(bandwidth float64) string {
 }
 
 
-func filterProxies(filter string, proxies map[string]CProxy) []string {
+func filterProxies(filter string, neg_filter string, proxies map[string]CProxy) []string {
 	filterRegexp := regexp.MustCompile(filter)
+	var negFilterRegexp *regexp.Regexp
+	if neg_filter != "" {
+		negFilterRegexp = regexp.MustCompile(neg_filter)
+	}
 	filteredProxies := make([]string, 0, len(proxies))
+
 	for name := range proxies {
-		if filterRegexp.MatchString(name) {
+		if filterRegexp.MatchString(name) && (neg_filter == "" || !negFilterRegexp.MatchString(name)) {
 			filteredProxies = append(filteredProxies, name)
 		}
 	}
+
 	sort.Strings(filteredProxies)
 	return filteredProxies
 }
+
 
 func loadProxies(buf []byte) (map[string]CProxy, error) {
 	rawCfg := &RawConfig{
