@@ -1,0 +1,20 @@
+name: Node Speed Test
+
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  execute-script:
+    runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.16.1' # The Go version to download (if necessary) and use.
+    - run: go clash-speedtest -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29'
+    
