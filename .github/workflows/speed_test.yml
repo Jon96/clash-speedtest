@@ -18,5 +18,6 @@ jobs:
         with:
           go-version: '1.14'
           check-latest: true
-      - run: go clash-speedtest -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29'
+      - run: go install github.com/faceair/clash-speedtest
+      - run: clash-speedtest -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29'
       
