@@ -12,12 +12,11 @@ jobs:
   execute-script:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v4      
+      - uses: actions/setup-go@v5.0.1
         with:
-          go-version: '1.14'
+          go-version: '>=1.17.0'
           check-latest: true
       - run: go install github.com/faceair/clash-speedtest
-      - run: clash-speedtest -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29'
+      - run: ./clash-speedtest -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29'
       
