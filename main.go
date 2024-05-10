@@ -146,8 +146,84 @@ func main() {
 		if err := writeToCSV("result.csv", results); err != nil {
 			log.Fatalln("Failed to write csv: %s", err)
 		}
+	} else if strings.EqualFold(*output, "info") {
+		if err := writeNodeConfigurationToINFOYAML("proxies_info.yaml", results); err != nil {
+			log.Fatalln("Failed to write csv: %s", err)
+		}
 	}
+		
 }
+
+func writeNodeConfigurationToFILTERYAML(filePath string, results []Result, proxies map[string]CProxy) error {
+    // 按带宽排序并格式化名称
+    sort.Slice(results, func(i, j int) bool {
+        return results[i].Bandwidth > results[j].Bandwidth
+    })
+    for i, result := range results {
+        formattedBandwidth := formatBandwidth(result.Bandwidth)
+        results[i].Name += formattedBandwidth
+        if i < 100 {
+            results[i].Name += fmt.Sprintf(" B#%d", i+1)
+        }
+    }
+
+    // 创建文件
+    fp, err := os.Create(filePath)
+    if err != nil {
+        return err
+    }
+    defer fp.Close()
+
+    var sortedProxies []any
+    // 添加排序后的节点
+    for _, result := range results {
+        if v, ok := proxies[result.Name]; ok {
+            sortedProxies = append(sortedProxies, v.SecretConfig)
+        }
+    }
+
+    // 添加不在results中的节点
+    for name, proxy := range proxies {
+        found := false
+        for _, result := range results {
+            if result.Name == name {
+                found = true
+                break
+            }
+        }
+        if !found {
+            sortedProxies = append(sortedProxies, proxy.SecretConfig)
+        }
+    }
+
+    // 序列化并写入文件
+    bytes, err := yaml.Marshal(sortedProxies)
+    if err != nil {
+        return err
+    }
+
+    _, err = fp.Write(bytes)
+    return err
+}
+
+// 辅助函数，用于格式化带宽值
+func formatBandwidth(bandwidth float64) string {
+    const (
+        Mbps = 1024 * 1024
+        Gbps = Mbps * 1024
+    )
+    var suffix string
+    switch {
+    case bandwidth >= Gbps:
+        suffix = fmt.Sprintf("@%dGBPS", bandwidth/Gbps)
+    case bandwidth >= Mbps:
+        suffix = fmt.Sprintf("@%dMBPS", bandwidth/Mbps)
+    default:
+        suffix = "@0MBPS"
+    }
+    return suffix
+}
+
 
 func filterProxies(filter string, proxies map[string]CProxy) []string {
 	filterRegexp := regexp.MustCompile(filter)
