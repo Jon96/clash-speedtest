@@ -160,7 +160,7 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
         return results[i].Bandwidth > results[j].Bandwidth
     })
     for i, result := range results {
-        formattedBandwidth := formatBandwidth(result.Bandwidth)
+        formattedBandwidth := formatBandwidthSuffix(result.Bandwidth)
         results[i].Name += formattedBandwidth
         if i < 100 {
             results[i].Name += fmt.Sprintf(" B#%d", i+1)
@@ -207,7 +207,7 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
 }
 
 // 辅助函数，用于格式化带宽值
-func formatBandwidth(bandwidth float64) string {
+func formatBandwidthSuffix(bandwidth float64) string {
     const (
         Mbps = 1024 * 1024
         Gbps = Mbps * 1024
