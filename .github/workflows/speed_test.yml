@@ -18,7 +18,7 @@ jobs:
           go-version: '>=1.17.0'
           check-latest: true
       - run: go build main.go
-      - run: ./main -c "${{ secrets.SUBS_LINK }}" -output "info" -nf "@\d+(GBPS|Gbps|Mbps|MBPS)$" --size 20971520
+      - run: ./main -c "${{ secrets.SUBS_LINK }}" -output "info" -nf "@\d+(GBPS|Gbps|Mbps|MBPS)$" --size 26214400
       - name: Create/Update Gist
         env:
           GH_TOKEN: ${{ secrets.PAT }}
