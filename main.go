@@ -34,6 +34,7 @@ var (
 	sortField          = flag.String("sort", "b", "sort field for testing proxies, b for bandwidth, t for TTFB")
 	output             = flag.String("output", "", "output result to csv/yaml file")
 	concurrent         = flag.Int("concurrent", 4, "download concurrent size")
+	filter_out         = flag.String("filter_out", "", "use filter_out")
 )
 
 type CProxy struct {
@@ -155,19 +156,7 @@ func main() {
 		
 }
 
-func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies map[string]CProxy) error {
-    // 按带宽排序并格式化名称
-    sort.Slice(results, func(i, j int) bool {
-        return results[i].Bandwidth > results[j].Bandwidth
-    })
-    for i, result := range results {
-        formattedBandwidth := formatBandwidthSuffix(result.Bandwidth)
-        results[i].Name += formattedBandwidth
-        if i < 100 {
-            results[i].Name += fmt.Sprintf(" B#%d", i+1)
-        }
-    }
-
+func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies map[string]CProxy, filter_out string) error {
     // 创建文件
     fp, err := os.Create(filePath)
     if err != nil {
@@ -176,25 +165,34 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
     defer fp.Close()
 
     var sortedProxies []any
-    // 添加排序后的节点
+
+    // 为results中的每个节点添加带宽后缀
     for _, result := range results {
-        if v, ok := proxies[result.Name]; ok {
-            sortedProxies = append(sortedProxies, v.SecretConfig)
+        if proxy, ok := proxies[result.Name]; ok {
+            // 格式化带宽后缀
+            bandwidthSuffix := formatBandwidthSuffix(result.Bandwidth)
+            // 更新proxies中的节点名称
+            proxy.Name += bandwidthSuffix
+            sortedProxies = append(sortedProxies, proxy)
+            // 从proxies映射中删除已处理的节点
+            delete(proxies, result.Name)
         }
     }
 
-    // 添加不在results中的节点
-    for name, proxy := range proxies {
-        found := false
-        for _, result := range results {
-            if result.Name == name {
-                found = true
-                break
+    // 如果filter_out为"yes"，则过滤掉不符合条件的节点
+    if filter_out == "yes" {
+        tempProxies := sortedProxies[:0]
+        for _, proxy := range sortedProxies {
+            if proxy.Bandwidth > 10*1024*1024 && proxy.TTFB > 0 && proxy.TTFB < 2000 {
+                tempProxies = append(tempProxies, proxy)
             }
         }
-        if !found {
-            sortedProxies = append(sortedProxies, proxy.SecretConfig)
-        }
+        sortedProxies = tempProxies
+    }
+
+    // 添加未经测试的节点
+    for _, proxy := range proxies {
+        sortedProxies = append(sortedProxies, proxy.SecretConfig)
     }
 
     // 序列化并写入文件
@@ -206,6 +204,15 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
     _, err = fp.Write(bytes)
     return err
 }
+
+// 辅助函数，用于格式化带宽后缀
+func formatBandwidthSuffix(bandwidth float64) string {
+    // 假设带宽单位是bps，并转换为Mbps
+    bandwidthMbps := bandwidth / (1024 * 1024)
+    // 返回不带小数的带宽后缀
+    return fmt.Sprintf("@%dMbps", int(bandwidthMbps))
+}
+
 
 // 辅助函数，用于格式化带宽值
 func formatBandwidthSuffix(bandwidth float64) string {
