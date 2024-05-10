@@ -18,5 +18,5 @@ jobs:
           go-version: '>=1.17.0'
           check-latest: true
       - run: go build main.go
-      - run: main -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29' --output info
+      - run: main -c 'https://rvps.duckking.shop:26720/s/clashMeta/764ed3a1a918ee05994ba37a1340ca29' -output "info"
       
