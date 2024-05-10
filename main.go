@@ -216,11 +216,11 @@ func formatBandwidthSuffix(bandwidth float64) string {
     var suffix string
     switch {
     case bandwidth >= Gbps:
-        suffix = fmt.Sprintf("#%dGBPS", bandwidth/Gbps)
+        suffix = fmt.Sprintf("-%dGBPS", bandwidth/Gbps)
     case bandwidth >= Mbps:
-        suffix = fmt.Sprintf("#%dMBPS", bandwidth/Mbps)
+        suffix = fmt.Sprintf("-%dMBPS", bandwidth/Mbps)
     default:
-        suffix = "#0MBPS"
+        suffix = "-0MBPS"
     }
     return suffix
 }
