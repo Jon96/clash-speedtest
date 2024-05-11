@@ -166,7 +166,7 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
 	for _, result := range results {
 		if v, ok := proxies[result.Name]; ok {
 			if strings.EqualFold(filterOut, "yes") {
-				if result.Bandwidth > 0.5*1024*1024 && (float64(result.TTFB.Milliseconds()) < 2000 &&
+				if result.Bandwidth > 1*1024*1024 && (float64(result.TTFB.Milliseconds()) < 2000 &&
 					float64(result.TTFB.Milliseconds()) > 0) {
 					if configMap, ok := v.SecretConfig.(map[string]any); ok {
 						if _, ok := configMap["name"].(string); ok {
