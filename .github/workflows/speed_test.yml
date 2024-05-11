@@ -23,5 +23,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
+          ls
           gh gist edit ${{ secrets.GIST_ID }} --add "proxies_info.yaml"
       
