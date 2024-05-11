@@ -5,6 +5,11 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"github.com/Dreamacro/clash/adapter"
+	"github.com/Dreamacro/clash/adapter/provider"
+	C "github.com/Dreamacro/clash/constant"
+	"github.com/Dreamacro/clash/log"
+	"gopkg.in/yaml.v3"
 	"io"
 	"net"
 	"net/http"
@@ -16,25 +21,19 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/Dreamacro/clash/adapter"
-	"github.com/Dreamacro/clash/adapter/provider"
-	C "github.com/Dreamacro/clash/constant"
-	"github.com/Dreamacro/clash/log"
-	"gopkg.in/yaml.v3"
 )
 
 var (
-	livenessObject     = flag.String("l", "https://speed.cloudflare.com/__down?bytes=%d", "liveness object, support http(s) url, support payload too")
-	configPathConfig   = flag.String("c", "", "configuration file path, also support http(s) url")
-	filterRegexConfig  = flag.String("f", ".*", "filter proxies by name, use regexp")
-	negFilterRegexConfig  = flag.String("nf", "", "neg-filter proxies by name, use regexp")
-	downloadSizeConfig = flag.Int("size", 1024*1024*100, "download size for testing proxies")
-	timeoutConfig      = flag.Duration("timeout", time.Second*5, "timeout for testing proxies")
-	sortField          = flag.String("sort", "b", "sort field for testing proxies, b for bandwidth, t for TTFB")
-	output             = flag.String("output", "", "output result to csv/yaml file")
-	concurrent         = flag.Int("concurrent", 4, "download concurrent size")
-	filter_out         = flag.String("filter_out", "", "use filter_out")
+	livenessObject       = flag.String("l", "https://speed.cloudflare.com/__down?bytes=%d", "liveness object, support http(s) url, support payload too")
+	configPathConfig     = flag.String("c", "", "configuration file path, also support http(s) url")
+	filterRegexConfig    = flag.String("f", ".*", "filter proxies by name, use regexp")
+	negFilterRegexConfig = flag.String("nf", "", "neg-filter proxies by name, use regexp")
+	downloadSizeConfig   = flag.Int("size", 1024*1024*100, "download size for testing proxies")
+	timeoutConfig        = flag.Duration("timeout", time.Second*5, "timeout for testing proxies")
+	sortField            = flag.String("sort", "b", "sort field for testing proxies, b for bandwidth, t for TTFB")
+	output               = flag.String("output", "", "output result to csv/yaml file")
+	concurrent           = flag.Int("concurrent", 4, "download concurrent size")
+	filterOut            = flag.String("filterout", "", "use filter_out")
 )
 
 type CProxy struct {
@@ -149,76 +148,78 @@ func main() {
 			log.Fatalln("Failed to write csv: %s", err)
 		}
 	} else if strings.EqualFold(*output, "info") {
-		if err := writeNodeConfigurationToINFOYAML("proxies_info.yaml", results, allProxies, *filter_out); err != nil {
+		if err := writeNodeConfigurationToINFOYAML("proxies_info.yaml", results, allProxies, *filterOut); err != nil {
 			log.Fatalln("Failed to write yaml with info: %s", err)
 		}
 	}
-		
+
 }
 
-func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies map[string]CProxy, filter_out string) error {
-    // 创建文件
-    fp, err := os.Create(filePath)
-    if err != nil {
-        return err
-    }
-    defer fp.Close()
+func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies map[string]CProxy, filterOut string) error {
+	fp, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
 
-    var sortedProxies []any
-
-    // 为results中的每个节点添加带宽后缀
-    for _, result := range results {
-        if proxy, ok := proxies[result.Name]; ok {
-            // 格式化带宽后缀
-            bandwidthSuffix := formatBandwidthSuffix(result.Bandwidth)
-            // 更新proxies中的节点名称
-            proxy.SecretConfig.Name += bandwidthSuffix
-            sortedProxies = append(sortedProxies, proxy)
-	    if filter_out == "yes" {
-		if result.Bandwidth > 10*1024*1024 && result.TTFB > 0 && result.TTFB < 200 {
-		    sortedProxies = append(sortedProxies, proxy.SecretConfig)
+	var sortedProxies []any
+	for _, result := range results {
+		if v, ok := proxies[result.Name]; ok {
+			if filterOut == "yes" {
+				if result.Bandwidth > 0.5*1024*1024 && result.TTFB < 2000 {
+					if configMap, ok := v.SecretConfig.(map[string]any); ok {
+						if _, ok := configMap["name"].(string); ok {
+							configMap["name"] = fmt.Sprintf("%s%s", configMap["name"], formatBandwidthSuffix(result.Bandwidth))
+							sortedProxies = append(sortedProxies, configMap)
+						}
+					}
+				}
+			}
 		}
-	    } else {
-	        sortedProxies = append(sortedProxies, proxy.SecretConfig)
-	    }
-            // 从proxies映射中删除已处理的节点
-            delete(proxies, result.Name)
-        }
-    }
+	}
 
-    // 添加未经测试的节点
-    for _, proxy := range proxies {
-        sortedProxies = append(sortedProxies, proxy.SecretConfig)
-    }
+	for name, proxy := range proxies {
+		if !contains(results, name) {
+			sortedProxies = append(sortedProxies, proxy.SecretConfig)
+		}
+	}
 
-    // 序列化并写入文件
-    bytes, err := yaml.Marshal(sortedProxies)
-    if err != nil {
-        return err
-    }
+	bytes, err := yaml.Marshal(map[string]any{"proxies": sortedProxies})
 
-    _, err = fp.Write(bytes)
-    return err
+	if err != nil {
+		return err
+	}
+
+	_, err = fp.Write(bytes)
+	return err
+}
+
+func contains(results []Result, name string) bool {
+	for _, result := range results {
+		if result.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // 辅助函数，用于格式化带宽值
 func formatBandwidthSuffix(bandwidth float64) string {
-    const (
-        Mbps = 1024 * 1024
-        Gbps = Mbps * 1024
-    )
-    var suffix string
-    switch {
-    case bandwidth >= Gbps:
-        suffix = fmt.Sprintf("-%dGBPS", bandwidth/Gbps)
-    case bandwidth >= Mbps:
-        suffix = fmt.Sprintf("-%dMBPS", bandwidth/Mbps)
-    default:
-        suffix = "-0MBPS"
-    }
-    return suffix
+	const (
+		Mbps = 1024 * 1024
+		Gbps = Mbps * 1024
+	)
+	var suffix string
+	switch {
+	case bandwidth >= Gbps:
+		suffix = fmt.Sprintf("-%dGBPS", bandwidth/Gbps)
+	case bandwidth >= Mbps:
+		suffix = fmt.Sprintf("-%dMBPS", bandwidth/Mbps)
+	default:
+		suffix = "-0MBPS"
+	}
+	return suffix
 }
-
 
 func filterProxies(filter string, neg_filter string, proxies map[string]CProxy) []string {
 	filterRegexp := regexp.MustCompile(filter)
@@ -237,7 +238,6 @@ func filterProxies(filter string, neg_filter string, proxies map[string]CProxy) 
 	sort.Strings(filteredProxies)
 	return filteredProxies
 }
-
 
 func loadProxies(buf []byte) (map[string]CProxy, error) {
 	rawCfg := &RawConfig{
