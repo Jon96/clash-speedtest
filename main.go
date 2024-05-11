@@ -29,7 +29,7 @@ var (
 	filterRegexConfig    = flag.String("f", ".*", "filter proxies by name, use regexp")
 	negFilterRegexConfig = flag.String("nf", "", "neg-filter proxies by name, use regexp")
 	downloadSizeConfig   = flag.Int("size", 1024*1024*100, "download size for testing proxies")
-	timeoutConfig        = flag.Duration("timeout", time.Second*6, "timeout for testing proxies")
+	timeoutConfig        = flag.Duration("timeout", time.Second*10, "timeout for testing proxies")
 	sortField            = flag.String("sort", "b", "sort field for testing proxies, b for bandwidth, t for TTFB")
 	output               = flag.String("output", "", "output result to csv/yaml file")
 	concurrent           = flag.Int("concurrent", 4, "download concurrent size")
@@ -213,9 +213,9 @@ func formatBandwidthSuffix(bandwidth float64) string {
 	var suffix string
 	switch {
 	case bandwidth >= Gbps:
-		suffix = fmt.Sprintf("-%dGBPS", bandwidth/Gbps)
+		suffix = fmt.Sprintf("-%dGBPS", int(bandwidth/Gbps))
 	case bandwidth >= Mbps:
-		suffix = fmt.Sprintf("-%dMBPS", bandwidth/Mbps)
+		suffix = fmt.Sprintf("-%dMBPS", int(bandwidth/Mbps))
 	default:
 		suffix = "-0MBPS"
 	}
