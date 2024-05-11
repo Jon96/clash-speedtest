@@ -166,7 +166,7 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
 	for _, result := range results {
 		if v, ok := proxies[result.Name]; ok {
 			if filterOut == "yes" {
-				if result.Bandwidth > 10*1024*1024 && result.TTFB < 2000 {
+				if result.Bandwidth > 0.5*1024*1024 && result.TTFB < 2000 && result.TTFB > 0 {
 					if configMap, ok := v.SecretConfig.(map[string]any); ok {
 						if _, ok := configMap["name"].(string); ok {
 							configMap["name"] = fmt.Sprintf("%s%s", configMap["name"], formatBandwidthSuffix(result.Bandwidth))
