@@ -29,7 +29,7 @@ var (
 	filterRegexConfig    = flag.String("f", ".*", "filter proxies by name, use regexp")
 	negFilterRegexConfig = flag.String("nf", "", "neg-filter proxies by name, use regexp")
 	downloadSizeConfig   = flag.Int("size", 1024*1024*100, "download size for testing proxies")
-	timeoutConfig        = flag.Duration("timeout", time.Second*5, "timeout for testing proxies")
+	timeoutConfig        = flag.Duration("timeout", time.Second*6, "timeout for testing proxies")
 	sortField            = flag.String("sort", "b", "sort field for testing proxies, b for bandwidth, t for TTFB")
 	output               = flag.String("output", "", "output result to csv/yaml file")
 	concurrent           = flag.Int("concurrent", 4, "download concurrent size")
@@ -165,8 +165,9 @@ func writeNodeConfigurationToINFOYAML(filePath string, results []Result, proxies
 	var sortedProxies []any
 	for _, result := range results {
 		if v, ok := proxies[result.Name]; ok {
-			if  strings.EqualFold(filterOut, "yes") {
-				if result.Bandwidth > 0.5*1024*1024 && result.TTFB < 2000 && result.TTFB > 0 {
+			if strings.EqualFold(filterOut, "yes") {
+				if result.Bandwidth > 0.5*1024*1024 && (float64(result.TTFB.Milliseconds()) < 2000 &&
+					float64(result.TTFB.Milliseconds()) > 0) {
 					if configMap, ok := v.SecretConfig.(map[string]any); ok {
 						if _, ok := configMap["name"].(string); ok {
 							configMap["name"] = fmt.Sprintf("%s%s", configMap["name"], formatBandwidthSuffix(result.Bandwidth))
