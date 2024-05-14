@@ -18,11 +18,11 @@ jobs:
           go-version: '>=1.17.0'
           check-latest: true
       - run: go build main.go
-      - run: ./main -c "${{ secrets.SUBS_LINK }}" -output "info" -nf "@\d+(GBPS|Gbps|Mbps|MBPS)$" -filterout "yes" --size 26214400
+      - run: ./main -c "${{ secrets.SUBS_LINK }}" -f ".*" -nf "@\d+(GBPS|Gbps|Mbps|MBPS)$" -size=25 -timeout "5" -sort "b" -output "yaml" -flt -lt "2000" -bdwd "2" -fn "proxies_filtered.yaml"
       - name: Create/Update Gist
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
           ls
-          gh gist edit ${{ secrets.GIST_ID }} --add "proxies_info.yaml"
+          gh gist edit ${{ secrets.GIST_ID }} --add "proxies_filtered.yaml"
       
