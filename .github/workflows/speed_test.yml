@@ -1,8 +1,8 @@
 name: Node Speed Test
 
 on:
-  schedule:
-    - cron: '0 14 * * *'
+  # schedule:
+  #   - cron: '0 14 * * *'
   workflow_dispatch: # 允许手动触发
 
 permissions:
